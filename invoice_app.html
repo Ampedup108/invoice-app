@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Field Invoice Manager</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--ink:#1a1a18;--ink2:#4a4a45;--ink3:#8a8a82;--paper:#f7f5f0;--paper2:#eeebe3;--paper3:#e4e0d5;--accent:#2d5a3d;--accent2:#4a8c61;--accent-light:#e8f2ec;--warn:#8b3a1a;--warn-light:#f5ede8;--gold:#a07c2a;--gold-light:#f5f0e0;--border:#d4d0c4;--radius:6px;--mono:'Courier New',monospace;--serif:Georgia,serif;--sans:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+body{font-family:var(--sans);background:var(--paper);color:var(--ink);min-height:100vh}
+#setupScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:16px;padding:20px}
+.setup-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:32px;max-width:520px;width:100%}
+.setup-card h1{font-family:var(--serif);font-size:22px;font-weight:400;margin-bottom:8px}
+.setup-card p{font-size:13px;color:var(--ink2);line-height:1.7;margin-bottom:16px}
+.setup-card ol{font-size:13px;color:var(--ink2);line-height:2.3;padding-left:20px;margin-bottom:20px}
+code{background:var(--paper2);padding:2px 6px;border-radius:3px;font-family:var(--mono);font-size:12px}
+.url-row{display:flex;gap:8px;margin-top:6px}
+.url-row input{flex:1;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--mono);outline:none}
+.url-row input:focus{border-color:var(--accent2)}
+#appScreen{display:none}
+.app{display:grid;grid-template-columns:190px 1fr;min-height:100vh}
+@media(max-width:640px){.app{grid-template-columns:1fr}.sidebar{display:none}.mobile-nav{display:flex !important}.page{padding:14px !important}}
+.mobile-nav{display:none;background:var(--ink);padding:8px 10px;gap:4px;overflow-x:auto;position:sticky;top:0;z-index:100}
+.mobile-nav-item{flex-shrink:0;padding:6px 12px;border-radius:20px;font-size:12px;color:rgba(255,255,255,0.6);cursor:pointer;white-space:nowrap}
+.mobile-nav-item.active{background:rgba(255,255,255,0.15);color:#fff}
+.sidebar{background:var(--ink);display:flex;flex-direction:column}
+.sidebar-brand{padding:22px 20px 18px;border-bottom:1px solid rgba(255,255,255,0.1)}
+.sidebar-brand h1{font-family:var(--serif);font-size:15px;color:#f7f5f0;font-weight:400;line-height:1.4}
+.nav{padding:14px 0;flex:1}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;font-size:13px;color:rgba(255,255,255,0.55);transition:all 0.15s;border-left:2px solid transparent}
+.nav-item:hover{color:rgba(255,255,255,0.85);background:rgba(255,255,255,0.05)}
+.nav-item.active{color:#fff;border-left-color:var(--accent2);background:rgba(255,255,255,0.08)}
+.sync-status{padding:10px 20px;font-size:11px;font-family:var(--mono);color:rgba(255,255,255,0.3);border-top:1px solid rgba(255,255,255,0.08)}
+.sync-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#888;margin-right:6px;vertical-align:middle}
+.sync-dot.green{background:var(--accent2)}
+.sync-dot.yellow{background:#d4a020;animation:pulse 1s infinite}
+.sync-dot.red{background:var(--warn)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.main{overflow-y:auto}
+.page{display:none;padding:24px 28px;max-width:980px}
+.page.active{display:block}
+.page-header{margin-bottom:22px;border-bottom:1px solid var(--border);padding-bottom:14px;display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.page-title{font-family:var(--serif);font-size:22px;font-weight:400}
+.page-sub{font-size:12px;color:var(--ink3);margin-top:3px;font-family:var(--mono)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius);font-size:13px;cursor:pointer;border:1px solid transparent;font-family:var(--sans);transition:all 0.15s}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent2)}
+.btn-primary:disabled{opacity:0.6;cursor:not-allowed}
+.btn-outline{background:transparent;color:var(--ink2);border-color:var(--border)}
+.btn-outline:hover{border-color:var(--ink3);background:var(--paper2)}
+.btn-danger{background:transparent;color:var(--warn);border-color:#e0c0b0;font-size:12px;padding:5px 10px}
+.btn-danger:hover{background:var(--warn-light)}
+.btn-gold{background:var(--gold);color:#fff}
+.btn-gold:hover{opacity:0.88}
+.form-row{display:grid;gap:12px;margin-bottom:14px}
+.c2{grid-template-columns:1fr 1fr}
+.c3{grid-template-columns:1fr 1fr 1fr}
+.c4{grid-template-columns:1fr 1fr 1fr 1fr}
+@media(max-width:640px){.c2,.c3,.c4{grid-template-columns:1fr}}
+label{display:block;font-size:10px;color:var(--ink3);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.07em;font-family:var(--mono)}
+input,select,textarea{width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:14px;background:#fff;color:var(--ink);font-family:var(--sans);outline:none;transition:border 0.15s;-webkit-appearance:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent2)}
+textarea{resize:vertical;min-height:58px}
+.form-card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:18px 20px;margin-bottom:18px}
+.form-card h3{font-size:11px;font-weight:500;color:var(--ink3);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--paper3);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.08em}
+.data-table{width:100%;border-collapse:collapse;font-size:13px}
+.data-table th{text-align:left;padding:8px 12px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink3);border-bottom:1px solid var(--border);font-family:var(--mono);white-space:nowrap}
+.data-table td{padding:10px 12px;border-bottom:1px solid var(--paper3);vertical-align:top}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr:hover td{background:var(--paper)}
+.table-wrap{background:#fff;border:1px solid var(--border);border-radius:8px;overflow:hidden;overflow-x:auto}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-family:var(--mono)}
+.badge-paid{background:var(--accent-light);color:var(--accent)}
+.badge-due{background:var(--warn-light);color:var(--warn)}
+.badge-draft{background:var(--gold-light);color:var(--gold)}
+.summary-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:22px}
+@media(max-width:640px){.summary-row{grid-template-columns:1fr 1fr}}
+.summary-card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:14px 16px}
+.slabel{font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink3);font-family:var(--mono);margin-bottom:6px}
+.svalue{font-family:var(--mono);font-size:20px;font-weight:500}
+.svalue.green{color:var(--accent)}
+.svalue.red{color:var(--warn)}
+.invoice-preview{background:#fff;border:1px solid var(--border);border-radius:8px;padding:40px 48px}
+@media(max-width:640px){.invoice-preview{padding:20px 16px}}
+.inv-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:30px;flex-wrap:wrap;gap:16px}
+.inv-from h2{font-family:var(--serif);font-size:18px;font-weight:700}
+.inv-from p{font-size:12px;color:var(--ink3);line-height:1.8;margin-top:6px}
+.inv-meta{text-align:right}
+.inv-word{font-family:var(--serif);font-size:26px;color:var(--ink3);letter-spacing:0.05em}
+.inv-num{font-family:var(--mono);font-size:13px;color:var(--ink2)}
+.inv-date{font-size:12px;color:var(--ink3);margin-top:4px}
+.inv-to{margin-bottom:22px}
+.to-label{font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--ink3);font-family:var(--mono);margin-bottom:6px}
+.to-name{font-size:16px;font-weight:500}
+.to-detail{font-size:12px;color:var(--ink3);margin-top:2px}
+.inv-table{width:100%;border-collapse:collapse;margin-bottom:18px}
+.inv-table th{text-align:left;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink3);border-bottom:2px solid var(--ink);font-family:var(--mono)}
+.inv-table th:last-child,.inv-table td:last-child{text-align:right}
+.inv-table td{padding:9px 10px;border-bottom:1px solid var(--paper3);font-size:13px}
+.inv-totals{border-top:2px solid var(--ink);padding-top:10px}
+.inv-total-row{display:flex;justify-content:flex-end;gap:48px;padding:4px 10px;font-size:13px}
+.inv-total-row.grand{font-weight:500;font-size:15px;font-family:var(--mono);border-top:1px solid var(--border);margin-top:6px;padding-top:10px}
+.inv-notes{margin-top:22px;padding-top:14px;border-top:1px solid var(--paper3);font-size:12px;color:var(--ink3);font-style:italic}
+.empty{text-align:center;padding:40px;color:var(--ink3);font-size:13px}
+.spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-right:4px}
+.alert{padding:10px 14px;border-radius:var(--radius);font-size:13px;margin-bottom:14px}
+.alert-success{background:var(--accent-light);color:var(--accent);border:1px solid #b8d9c4}
+.alert-warn{background:var(--warn-light);color:var(--warn);border:1px solid #e0c0b0}
+@media print{#setupScreen,#appScreen .sidebar,.mobile-nav,.page-header,.form-card,.btn,#invoiceControls{display:none !important}.app{grid-template-columns:1fr}.page{display:block !important;padding:0 !important;max-width:100%}.invoice-preview{border:none;padding:20px}body{background:white}}
+</style>
+</head>
+<body>
+
+<div id="setupScreen">
+  <div class="setup-card">
+    <div style="font-size:36px;margin-bottom:12px">&#128203;</div>
+    <h1>Field Invoice Manager</h1>
+    <p>Connect your Google Sheet in 3 steps.</p>
+    <ol>
+      <li>Go to <a href="https://sheets.google.com" target="_blank" style="color:var(--accent2)">Google Sheets</a>, create a new blank sheet named <strong>Field Invoice Manager</strong></li>
+      <li>Click <strong>Extensions &rarr; Apps Script</strong>, delete existing code, paste the <code>AppsScript.gs</code> file, click Save</li>
+      <li>Click <strong>Deploy &rarr; New Deployment &rarr; Web App</strong>, set Execute as: <strong>Me</strong>, Who has access: <strong>Anyone</strong>, click Deploy, copy the URL</li>
+    </ol>
+    <div id="setupAlert"></div>
+    <label>Paste your Web App URL</label>
+    <div class="url-row">
+      <input id="scriptUrl" placeholder="https://script.google.com/macros/s/.../exec" type="url">
+      <button class="btn btn-primary" onclick="connectScript()">Connect</button>
+    </div>
+    <p style="margin-top:14px;font-size:11px;color:var(--ink3)">Your data stays in your own Google Sheet.</p>
+  </div>
+</div>
+
+<div id="appScreen">
+  <div class="mobile-nav">
+    <div class="mobile-nav-item active" onclick="showPage('dashboard')">Home</div>
+    <div class="mobile-nav-item" onclick="showPage('clients')">Clients</div>
+    <div class="mobile-nav-item" onclick="showPage('hours')">Hours</div>
+    <div class="mobile-nav-item" onclick="showPage('materials')">Materials</div>
+    <div class="mobile-nav-item" onclick="showPage('invoices')">Invoice</div>
+    <div class="mobile-nav-item" onclick="showPage('history')">History</div>
+  </div>
+  <div class="app">
+    <div class="sidebar">
+      <div class="sidebar-brand"><h1>Field Invoice<br>Manager</h1></div>
+      <nav class="nav">
+        <div class="nav-item active" onclick="showPage('dashboard')">&#9672; Dashboard</div>
+        <div class="nav-item" onclick="showPage('clients')">&#9678; Clients</div>
+        <div class="nav-item" onclick="showPage('hours')">&#9719; Log Hours</div>
+        <div class="nav-item" onclick="showPage('materials')">&#9723; Materials</div>
+        <div class="nav-item" onclick="showPage('invoices')">&#9672; Create Invoice</div>
+        <div class="nav-item" onclick="showPage('history')">&#9681; History</div>
+      </nav>
+      <div class="sync-status"><span class="sync-dot" id="syncDot"></span><span id="syncText">connecting...</span></div>
+      <div style="padding:10px 20px 16px">
+        <button class="btn btn-outline" style="width:100%;color:rgba(255,255,255,0.4);border-color:rgba(255,255,255,0.12);font-size:11px;padding:6px" onclick="disconnect()">Change sheet</button>
+      </div>
+    </div>
+    <div class="main">
+
+      <div class="page active" id="page-dashboard">
+        <div class="page-header">
+          <div><div class="page-title">Overview</div><div class="page-sub">unbilled work &amp; outstanding invoices</div></div>
+          <button class="btn btn-outline" onclick="syncAll()">Sync</button>
+        </div>
+        <div class="summary-row" id="dashSummary"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink3);font-family:var(--mono);margin-bottom:8px">Unbilled by client</div><div class="table-wrap" id="dashUnbilled"></div></div>
+          <div><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink3);font-family:var(--mono);margin-bottom:8px">Outstanding invoices</div><div class="table-wrap" id="dashOutstanding"></div></div>
+        </div>
+      </div>
+
+      <div class="page" id="page-clients">
+        <div class="page-header">
+          <div><div class="page-title">Clients</div><div class="page-sub">rates &amp; contact info</div></div>
+          <button class="btn btn-primary" onclick="toggleForm('clientForm')">+ Add Client</button>
+        </div>
+        <div class="form-card" id="clientForm" style="display:none">
+          <h3>New Client</h3>
+          <div class="form-row c2"><div><label>Client Name</label><input id="cf_name" placeholder="e.g. Michael Anderson"></div><div><label>Hourly Rate ($)</label><input id="cf_rate" type="number" step="0.01" placeholder="95.00"></div></div>
+          <div class="form-row c2"><div><label>Phone</label><input id="cf_phone" type="tel" placeholder="360-555-0100"></div><div><label>Email</label><input id="cf_email" type="email" placeholder="client@email.com"></div></div>
+          <div class="form-row c2"><div><label>Tax Rate (%)</label><input id="cf_tax" type="number" step="0.1" placeholder="10.5"></div><div><label>Address / Notes</label><input id="cf_notes" placeholder="Billing address or notes"></div></div>
+          <div style="display:flex;gap:8px;margin-top:4px"><button class="btn btn-primary" id="saveClientBtn" onclick="saveClient()">Save Client</button><button class="btn btn-outline" onclick="toggleForm('clientForm')">Cancel</button></div>
+        </div>
+        <div class="table-wrap" id="clientsTable"></div>
+      </div>
+
+      <div class="page" id="page-hours">
+        <div class="page-header"><div><div class="page-title">Log Hours</div><div class="page-sub">syncs to Google Sheets</div></div></div>
+        <div class="form-card">
+          <h3>New Time Entry</h3>
+          <div class="form-row c2"><div><label>Client</label><select id="hf_client"><option value="">-- select --</option></select></div><div><label>Date</label><input id="hf_date" type="date"></div></div>
+          <div class="form-row c3"><div><label>Start</label><input id="hf_start" type="time"></div><div><label>Finish</label><input id="hf_finish" type="time"></div><div><label>Hours (auto)</label><input id="hf_hours" type="number" step="0.25" placeholder="1.25"></div></div>
+          <div class="form-row c2"><div><label>Materials this visit ($)</label><input id="hf_materials" type="number" step="0.01" placeholder="0.00"></div><div><label>Invoice # (if already billed)</label><input id="hf_invoice" placeholder="leave blank = unbilled"></div></div>
+          <div class="form-row"><div><label>Work Done</label><textarea id="hf_work" placeholder="Describe work performed..."></textarea></div></div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><button class="btn btn-primary" id="saveHoursBtn" onclick="saveHours()">Save Entry</button><button class="btn btn-outline" onclick="clearHoursForm()">Clear</button><span id="hoursAlert" style="font-size:13px"></span></div>
+        </div>
+        <div class="table-wrap" id="hoursTable"></div>
+      </div>
+
+      <div class="page" id="page-materials">
+        <div class="page-header">
+          <div><div class="page-title">Materials</div><div class="page-sub">purchases tagged to client</div></div>
+          <button class="btn btn-primary" onclick="toggleForm('materialForm')">+ Add Material</button>
+        </div>
+        <div class="form-card" id="materialForm" style="display:none">
+          <h3>New Material Purchase</h3>
+          <div class="form-row c3"><div><label>Client</label><select id="mf_client"><option value="">-- select --</option></select></div><div><label>Date</label><input id="mf_date" type="date"></div><div><label>Amount ($)</label><input id="mf_amount" type="number" step="0.01" placeholder="0.00"></div></div>
+          <div class="form-row c2"><div><label>Description</label><input id="mf_desc" placeholder="e.g. Kwikset deadbolt, Home Depot"></div><div><label>Receipt #</label><input id="mf_receipt" placeholder="optional"></div></div>
+          <div style="display:flex;gap:8px;margin-top:4px"><button class="btn btn-primary" id="saveMaterialBtn" onclick="saveMaterial()">Save Material</button><button class="btn btn-outline" onclick="toggleForm('materialForm')">Cancel</button></div>
+        </div>
+        <div class="table-wrap" id="materialsTable"></div>
+      </div>
+
+      <div class="page" id="page-invoices">
+        <div class="page-header"><div><div class="page-title">Create Invoice</div><div class="page-sub">select client &rarr; review &rarr; print PDF</div></div></div>
+        <div class="form-card" id="invoiceControls">
+          <h3>Invoice Setup</h3>
+          <div class="form-row c3"><div><label>Client</label><select id="inv_client" onchange="buildInvoicePreview()"><option value="">-- select --</option></select></div><div><label>Invoice #</label><input id="inv_num" placeholder="auto"></div><div><label>Invoice Date</label><input id="inv_date" type="date"></div></div>
+          <div class="form-row c2"><div><label>Due Date</label><input id="inv_due" type="date"></div><div><label>Notes on invoice</label><input id="inv_notes" placeholder="Payment due within 30 days."></div></div>
+          <div class="form-row c3"><div><label>Your Business Name</label><input id="inv_biz" placeholder="Your Name / Business"></div><div><label>Your Phone</label><input id="inv_phone" type="tel" placeholder="360-555-0000"></div><div><label>Your Email</label><input id="inv_email" type="email" placeholder="you@email.com"></div></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+            <button class="btn btn-outline" onclick="buildInvoicePreview()">Refresh Preview</button>
+            <button class="btn btn-gold" onclick="window.print()">Print / Save PDF</button>
+            <button class="btn btn-primary" id="markSentBtn" onclick="markInvoiceSent()">Mark as Sent</button>
+          </div>
+        </div>
+        <div id="invoicePreviewArea"></div>
+      </div>
+
+      <div class="page" id="page-history">
+        <div class="page-header"><div><div class="page-title">Invoice History</div><div class="page-sub">payment tracking</div></div></div>
+        <div class="summary-row" id="historySummary"></div>
+        <div class="table-wrap" id="historyTable"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const URL_KEY = 'fim_script_url';
+const BIZ_KEY = 'fim_biz';
+let scriptUrl = localStorage.getItem(URL_KEY) || '';
+let clients = [], hours = [], materials = [], invoiceHistory = [];
+
+window.onload = function() {
+  if (scriptUrl) { showApp(); syncAll(); }
+  else { document.getElementById('setupScreen').style.display = 'flex'; }
+};
+
+async function connectScript() {
+  const url = document.getElementById('scriptUrl').value.trim();
+  const alertEl = document.getElementById('setupAlert');
+  if (!url.includes('script.google.com')) {
+    alertEl.innerHTML = '<div class="alert alert-warn">That does not look like a Google Apps Script URL.</div>';
+    return;
+  }
+  alertEl.innerHTML = '<div class="alert alert-warn">Testing connection...</div>';
+  try {
+    const res = await apiCall({ action: 'ping' }, url);
+    if (res && res.ok) {
+      scriptUrl = url;
+      localStorage.setItem(URL_KEY, scriptUrl);
+      alertEl.innerHTML = '';
+      showApp();
+      syncAll();
+    } else {
+      alertEl.innerHTML = '<div class="alert alert-warn">Response received but unexpected: ' + JSON.stringify(res) + '</div>';
+    }
+  } catch(e) {
+    alertEl.innerHTML = '<div class="alert alert-warn">Connection failed: ' + e.message + '</div>';
+  }
+}
+
+function showApp() {
+  document.getElementById('setupScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display = 'block';
+}
+
+function disconnect() {
+  if (!confirm('Change the connected sheet?')) return;
+  localStorage.removeItem(URL_KEY);
+  scriptUrl = '';
+  document.getElementById('appScreen').style.display = 'none';
+  document.getElementById('setupScreen').style.display = 'flex';
+}
+
+async function apiCall(params, url) {
+  url = url || scriptUrl;
+  const qs = Object.entries(params).map(([k,v]) =>
+    encodeURIComponent(k) + '=' + encodeURIComponent(typeof v === 'object' ? JSON.stringify(v) : v)
+  ).join('&');
+  const res = await fetch(url + '?' + qs, { method: 'GET', redirect: 'follow' });
+  const text = await res.text();
+  try { return JSON.parse(text); }
+  catch(e) { throw new Error('Bad response: ' + text.slice(0, 200)); }
+}
+
+async function syncAll() {
+  setSyncStatus('yellow', 'syncing...');
+  try {
+    const data = await apiCall({ action: 'getAll' });
+    if (data.error) throw new Error(data.error);
+    clients = (data.Clients || []).map(r => ({ id:S(r[0]), name:S(r[1]), rate:F(r[2]), tax:F(r[3]), phone:S(r[4]), email:S(r[5]), notes:S(r[6]) }));
+    hours = (data.Hours || []).map(r => ({ id:S(r[0]), clientId:S(r[1]), date:S(r[2]), start:S(r[3]), finish:S(r[4]), hours:F(r[5]), materials:F(r[6]), work:S(r[7]), invoiceNum:S(r[8]), billed:S(r[9])==='TRUE' }));
+    materials = (data.Materials || []).map(r => ({ id:S(r[0]), clientId:S(r[1]), date:S(r[2]), amount:F(r[3]), desc:S(r[4]), receipt:S(r[5]), invoiceNum:S(r[6]), billed:S(r[7])==='TRUE' }));
+    invoiceHistory = (data.Invoices || []).map(r => ({ id:S(r[0]), invNum:S(r[1]), clientId:S(r[2]), clientName:S(r[3]), date:S(r[4]), due:S(r[5]), total:F(r[6]), status:S(r[7])||'sent', paidDate:S(r[8]) }));
+    populateClientSelects();
+    renderDashboard(); renderClientsTable(); renderHoursTable(); renderMaterialsTable(); renderHistory();
+    setSyncStatus('green', 'synced');
+  } catch(e) {
+    console.error(e);
+    setSyncStatus('red', 'sync error');
+  }
+}
+
+function S(v) { return (v === undefined || v === null) ? '' : String(v); }
+function F(v) { return parseFloat(v) || 0; }
+function fmtMoney(n) { return '$' + parseFloat(n||0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+function fmtDate(d) {
+  if (!d || d === 'undefined') return '';
+  const p = d.split('-');
+  return p.length === 3 ? p[1] + '/' + p[2] + '/' + p[0] : d;
+}
+function todayStr() { return new Date().toISOString().split('T')[0]; }
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
+function nextInvNum() { return 'INV-' + String(invoiceHistory.length + 1).padStart(4, '0'); }
+function clientById(id) { return clients.find(c => c.id === id); }
+function setSyncStatus(color, text) {
+  const d = document.getElementById('syncDot');
+  if (d) d.className = 'sync-dot ' + color;
+  const t = document.getElementById('syncText');
+  if (t) t.textContent = text;
+}
+function calcHours(s, f) {
+  if (!s || !f) return '';
+  const [sh,sm] = s.split(':').map(Number), [fh,fm] = f.split(':').map(Number);
+  const diff = (fh*60+fm) - (sh*60+sm);
+  return diff > 0 ? (diff/60).toFixed(2) : '';
+}
+function toggleForm(id) {
+  const el = document.getElementById(id);
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+function setBtnLoading(id, loading, label) {
+  const b = document.getElementById(id);
+  if (!b) return;
+  b.disabled = loading;
+  b.innerHTML = loading ? '<span class="spinner"></span> Saving...' : label;
+}
+
+function showPage(p) {
+  document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-item, .mobile-nav-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('page-' + p).classList.add('active');
+  const map = { dashboard:0, clients:1, hours:2, materials:3, invoices:4, history:5 };
+  const ni = document.querySelectorAll('.nav-item');
+  if (ni[map[p]]) ni[map[p]].classList.add('active');
+  const mi = document.querySelectorAll('.mobile-nav-item');
+  if (mi[map[p]]) mi[map[p]].classList.add('active');
+  if (p === 'hours' && !document.getElementById('hf_date').value) document.getElementById('hf_date').value = todayStr();
+  if (p === 'materials' && !document.getElementById('mf_date').value) document.getElementById('mf_date').value = todayStr();
+  if (p === 'invoices') setInvoiceDefaults();
+  if (p === 'dashboard') renderDashboard();
+  if (p === 'history') renderHistory();
+}
+
+function setInvoiceDefaults() {
+  const n = document.getElementById('inv_num'); if (n && !n.value) n.value = nextInvNum();
+  const d = document.getElementById('inv_date'); if (d && !d.value) d.value = todayStr();
+  const due = document.getElementById('inv_due');
+  if (due && !due.value) { const dd = new Date(); dd.setDate(dd.getDate()+30); due.value = dd.toISOString().split('T')[0]; }
+  const biz = JSON.parse(localStorage.getItem(BIZ_KEY) || '{}');
+  ['biz','phone','email','notes'].forEach(k => { const el = document.getElementById('inv_' + k); if (el && biz[k] && !el.value) el.value = biz[k]; });
+}
+
+function populateClientSelects() {
+  ['hf_client','mf_client','inv_client'].forEach(id => {
+    const el = document.getElementById(id); if (!el) return;
+    const val = el.value;
+    el.innerHTML = '<option value="">-- select client --</option>';
+    clients.forEach(c => { const o = document.createElement('option'); o.value = c.id; o.textContent = c.name; el.appendChild(o); });
+    if (val) el.value = val;
+  });
+}
+
+async function saveClient() {
+  const name = document.getElementById('cf_name').value.trim();
+  const rate = F(document.getElementById('cf_rate').value);
+  if (!name || !rate) { alert('Name and rate are required.'); return; }
+  const c = { id:uid(), name, rate, tax:F(document.getElementById('cf_tax').value), phone:document.getElementById('cf_phone').value.trim(), email:document.getElementById('cf_email').value.trim(), notes:document.getElementById('cf_notes').value.trim() };
+  setBtnLoading('saveClientBtn', true);
+  try {
+    const res = await apiCall({ action:'addClient', row:[c.id,c.name,c.rate,c.tax,c.phone,c.email,c.notes] });
+    if (res.error) throw new Error(res.error);
+    clients.push(c);
+    populateClientSelects(); renderClientsTable(); toggleForm('clientForm');
+    ['cf_name','cf_rate','cf_tax','cf_phone','cf_email','cf_notes'].forEach(id => document.getElementById(id).value = '');
+    setSyncStatus('green', 'saved');
+  } catch(e) { alert('Error: ' + e.message); setSyncStatus('red', 'error'); }
+  setBtnLoading('saveClientBtn', false, 'Save Client');
+}
+
+async function deleteClient(id) {
+  if (!confirm('Delete this client?')) return;
+  try {
+    await apiCall({ action:'deleteClient', id });
+    clients = clients.filter(c => c.id !== id);
+    renderClientsTable(); populateClientSelects(); setSyncStatus('green', 'deleted');
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+function renderClientsTable() {
+  const el = document.getElementById('clientsTable');
+  if (!clients.length) { el.innerHTML = '<div class="empty">No clients yet.</div>'; return; }
+  let rows = '';
+  clients.forEach(c => {
+    rows += `<tr>
+      <td style="font-weight:500">${c.name}</td>
+      <td style="font-family:var(--mono)">${fmtMoney(c.rate)}</td>
+      <td style="font-family:var(--mono)">${c.tax || 0}%</td>
+      <td style="color:var(--ink3)">${c.phone || '--'}</td>
+      <td style="color:var(--ink3)">${c.email || '--'}</td>
+      <td><button class="btn btn-danger" onclick="deleteClient('${c.id}')">Remove</button></td>
+    </tr>`;
+  });
+  el.innerHTML = `<table class="data-table"><thead><tr><th>Name</th><th>Rate/hr</th><th>Tax%</th><th>Phone</th><th>Email</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const s = document.getElementById('hf_start'), f = document.getElementById('hf_finish'), h = document.getElementById('hf_hours');
+  if (s && f && h) {
+    function ah() { const v = calcHours(s.value, f.value); if (v) h.value = v; }
+    s.addEventListener('change', ah); f.addEventListener('change', ah);
+  }
+});
+
+function clearHoursForm() {
+  ['hf_client','hf_start','hf_finish','hf_hours','hf_materials','hf_invoice','hf_work'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('hf_date').value = todayStr();
+}
+
+async function saveHours() {
+  const clientId = document.getElementById('hf_client').value;
+  const date = document.getElementById('hf_date').value;
+  const hrs = F(document.getElementById('hf_hours').value);
+  if (!clientId || !date || !hrs) { document.getElementById('hoursAlert').innerHTML = '<span style="color:var(--warn)">Client, date and hours required.</span>'; return; }
+  const invoiceNum = document.getElementById('hf_invoice').value.trim();
+  const entry = { id:uid(), clientId, date, start:document.getElementById('hf_start').value, finish:document.getElementById('hf_finish').value, hours:hrs, materials:F(document.getElementById('hf_materials').value), work:document.getElementById('hf_work').value.trim(), invoiceNum, billed:!!invoiceNum };
+  setBtnLoading('saveHoursBtn', true);
+  try {
+    const res = await apiCall({ action:'addHour', row:[entry.id,entry.clientId,entry.date,entry.start,entry.finish,entry.hours,entry.materials,entry.work,entry.invoiceNum,entry.billed?'TRUE':'FALSE'] });
+    if (res.error) throw new Error(res.error);
+    hours.push(entry);
+    renderHoursTable(); renderDashboard();
+    document.getElementById('hoursAlert').innerHTML = '<span style="color:var(--accent)">Saved</span>';
+    setTimeout(() => document.getElementById('hoursAlert').innerHTML = '', 2500);
+    clearHoursForm(); setSyncStatus('green', 'saved');
+  } catch(e) { alert('Error: ' + e.message); setSyncStatus('red', 'error'); }
+  setBtnLoading('saveHoursBtn', false, 'Save Entry');
+}
+
+async function deleteHour(id) {
+  if (!confirm('Delete this entry?')) return;
+  try {
+    await apiCall({ action:'deleteHour', id });
+    hours = hours.filter(h => h.id !== id);
+    renderHoursTable(); renderDashboard(); setSyncStatus('green', 'deleted');
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+function renderHoursTable() {
+  const el = document.getElementById('hoursTable');
+  if (!hours.length) { el.innerHTML = '<div class="empty">No time entries yet.</div>'; return; }
+  const sorted = [...hours].sort((a,b) => b.date.localeCompare(a.date));
+  let rows = '';
+  sorted.forEach(h => {
+    const c = clientById(h.clientId);
+    const status = h.billed
+      ? `<span class="badge badge-paid">${h.invoiceNum}</span>`
+      : '<span class="badge badge-draft">unbilled</span>';
+    rows += `<tr>
+      <td style="font-family:var(--mono);white-space:nowrap">${fmtDate(h.date)}</td>
+      <td style="font-weight:500">${c ? c.name : '?'}</td>
+      <td style="font-family:var(--mono)">${h.start || '--'}</td>
+      <td style="font-family:var(--mono)">${h.finish || '--'}</td>
+      <td style="font-family:var(--mono)">${h.hours}</td>
+      <td style="font-family:var(--mono)">${h.materials ? fmtMoney(h.materials) : '--'}</td>
+      <td style="color:var(--ink2);max-width:180px;font-size:12px">${h.work || '--'}</td>
+      <td>${status}</td>
+      <td><button class="btn btn-danger" onclick="deleteHour('${h.id}')">X</button></td>
+    </tr>`;
+  });
+  el.innerHTML = `<table class="data-table"><thead><tr><th>Date</th><th>Client</th><th>Start</th><th>End</th><th>Hrs</th><th>Mats</th><th>Work Done</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+async function saveMaterial() {
+  const clientId = document.getElementById('mf_client').value;
+  const amount = F(document.getElementById('mf_amount').value);
+  const desc = document.getElementById('mf_desc').value.trim();
+  if (!clientId || !amount || !desc) { alert('Client, amount and description required.'); return; }
+  const m = { id:uid(), clientId, date:document.getElementById('mf_date').value || todayStr(), amount, desc, receipt:document.getElementById('mf_receipt').value.trim(), invoiceNum:'', billed:false };
+  setBtnLoading('saveMaterialBtn', true);
+  try {
+    const res = await apiCall({ action:'addMaterial', row:[m.id,m.clientId,m.date,m.amount,m.desc,m.receipt,'','FALSE'] });
+    if (res.error) throw new Error(res.error);
+    materials.push(m);
+    renderMaterialsTable(); renderDashboard(); toggleForm('materialForm');
+    ['mf_client','mf_amount','mf_desc','mf_receipt'].forEach(id => document.getElementById(id).value = '');
+    setSyncStatus('green', 'saved');
+  } catch(e) { alert('Error: ' + e.message); setSyncStatus('red', 'error'); }
+  setBtnLoading('saveMaterialBtn', false, 'Save Material');
+}
+
+async function deleteMaterial(id) {
+  if (!confirm('Delete?')) return;
+  try {
+    await apiCall({ action:'deleteMaterial', id });
+    materials = materials.filter(m => m.id !== id);
+    renderMaterialsTable(); renderDashboard(); setSyncStatus('green', 'deleted');
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+function renderMaterialsTable() {
+  const el = document.getElementById('materialsTable');
+  if (!materials.length) { el.innerHTML = '<div class="empty">No materials logged yet.</div>'; return; }
+  const sorted = [...materials].sort((a,b) => b.date.localeCompare(a.date));
+  let rows = '';
+  sorted.forEach(m => {
+    const c = clientById(m.clientId);
+    const status = m.billed
+      ? `<span class="badge badge-paid">${m.invoiceNum}</span>`
+      : '<span class="badge badge-draft">unbilled</span>';
+    rows += `<tr>
+      <td style="font-family:var(--mono);white-space:nowrap">${fmtDate(m.date)}</td>
+      <td style="font-weight:500">${c ? c.name : '?'}</td>
+      <td>${m.desc}</td>
+      <td style="font-family:var(--mono)">${fmtMoney(m.amount)}</td>
+      <td style="color:var(--ink3);font-size:12px">${m.receipt || '--'}</td>
+      <td>${status}</td>
+      <td><button class="btn btn-danger" onclick="deleteMaterial('${m.id}')">X</button></td>
+    </tr>`;
+  });
+  el.innerHTML = `<table class="data-table"><thead><tr><th>Date</th><th>Client</th><th>Description</th><th>Amount</th><th>Receipt</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function buildInvoicePreview() {
+  const clientId = document.getElementById('inv_client').value;
+  const area = document.getElementById('invoicePreviewArea');
+  if (!clientId) { area.innerHTML = '<div class="empty" style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:60px">Select a client above to preview the invoice.</div>'; return; }
+  const c = clientById(clientId); if (!c) return;
+  const uh = hours.filter(h => h.clientId === clientId && !h.billed);
+  const um = materials.filter(m => m.clientId === clientId && !m.billed);
+  if (!uh.length && !um.length) { area.innerHTML = '<div class="alert alert-warn">No unbilled hours or materials for this client.</div>'; return; }
+  const biz = { name:document.getElementById('inv_biz').value, phone:document.getElementById('inv_phone').value, email:document.getElementById('inv_email').value, notes:document.getElementById('inv_notes').value };
+  localStorage.setItem(BIZ_KEY, JSON.stringify(biz));
+  const invNum = document.getElementById('inv_num').value || nextInvNum();
+  const invDate = document.getElementById('inv_date').value || todayStr();
+  const invDue = document.getElementById('inv_due').value || '';
+  const invNotes = biz.notes || 'Payment due within 30 days. Thank you for your business.';
+  const laborSub = uh.reduce((s,h) => s + (h.hours * c.rate), 0);
+  const matSub = uh.reduce((s,h) => s + (h.materials || 0), 0) + um.reduce((s,m) => s + m.amount, 0);
+  const sub = laborSub + matSub;
+  const taxAmt = sub * ((c.tax || 0) / 100);
+  const total = sub + taxAmt;
+
+  let hRows = '';
+  uh.forEach(h => {
+    hRows += `<tr><td>${fmtDate(h.date)}</td><td>${h.work || 'Labor'}</td><td style="text-align:center;font-family:var(--mono)">${h.hours} hrs</td><td style="text-align:center;font-family:var(--mono)">${fmtMoney(c.rate)}/hr</td><td style="font-family:var(--mono)">${fmtMoney(h.hours * c.rate)}</td></tr>`;
+    if (h.materials) hRows += `<tr><td>${fmtDate(h.date)}</td><td style="color:var(--ink3)">Materials (visit)</td><td></td><td></td><td style="font-family:var(--mono)">${fmtMoney(h.materials)}</td></tr>`;
+  });
+  let mRows = '';
+  um.forEach(m => {
+    mRows += `<tr><td>${fmtDate(m.date)}</td><td>${m.desc}${m.receipt ? ' (' + m.receipt + ')' : ''}</td><td></td><td></td><td style="font-family:var(--mono)">${fmtMoney(m.amount)}</td></tr>`;
+  });
+
+  area.innerHTML = `<div class="invoice-preview">
+    <div class="inv-header">
+      <div class="inv-from"><h2>${biz.name || 'Your Business'}</h2><p>${biz.phone ? biz.phone + '<br>' : ''}${biz.email || ''}</p></div>
+      <div class="inv-meta"><div class="inv-word">INVOICE</div><div class="inv-num">${invNum}</div><div class="inv-date">Date: ${fmtDate(invDate)}</div>${invDue ? '<div class="inv-date" style="color:var(--warn)">Due: ' + fmtDate(invDue) + '</div>' : ''}</div>
+    </div>
+    <div class="inv-to"><div class="to-label">Bill To</div><div class="to-name">${c.name}</div><div class="to-detail">${[c.phone, c.email].filter(Boolean).join(' - ')}</div>${c.notes ? '<div class="to-detail" style="margin-top:4px">' + c.notes + '</div>' : ''}</div>
+    <table class="inv-table"><thead><tr><th>Date</th><th>Description</th><th style="text-align:center">Qty</th><th style="text-align:center">Rate</th><th>Amount</th></tr></thead><tbody>
+      ${uh.length ? '<tr><td colspan="5" style="padding:8px 10px 2px;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--ink3);font-family:var(--mono)">Labor</td></tr>' : ''}${hRows}
+      ${um.length ? '<tr><td colspan="5" style="padding:8px 10px 2px;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--ink3);font-family:var(--mono)">Materials</td></tr>' : ''}${mRows}
+    </tbody></table>
+    <div class="inv-totals">
+      <div class="inv-total-row"><span>Labor subtotal</span><span style="font-family:var(--mono)">${fmtMoney(laborSub)}</span></div>
+      <div class="inv-total-row"><span>Materials subtotal</span><span style="font-family:var(--mono)">${fmtMoney(matSub)}</span></div>
+      ${c.tax ? '<div class="inv-total-row"><span>Tax (' + c.tax + '%)</span><span style="font-family:var(--mono)">' + fmtMoney(taxAmt) + '</span></div>' : ''}
+      <div class="inv-total-row grand"><span>Total Due</span><span>${fmtMoney(total)}</span></div>
+    </div>
+    ${invNotes ? '<div class="inv-notes">' + invNotes + '</div>' : ''}
+  </div>`;
+}
+
+async function markInvoiceSent() {
+  const clientId = document.getElementById('inv_client').value;
+  if (!clientId) { alert('Select a client first.'); return; }
+  const c = clientById(clientId);
+  const invNum = document.getElementById('inv_num').value || nextInvNum();
+  const invDate = document.getElementById('inv_date').value || todayStr();
+  const invDue = document.getElementById('inv_due').value || '';
+  const uh = hours.filter(h => h.clientId === clientId && !h.billed);
+  const um = materials.filter(m => m.clientId === clientId && !m.billed);
+  if (!uh.length && !um.length) { alert('Nothing unbilled for this client.'); return; }
+  const total = (uh.reduce((s,h) => s+(h.hours*c.rate),0) + uh.reduce((s,h) => s+(h.materials||0),0) + um.reduce((s,m) => s+m.amount,0)) * (1 + (c.tax||0)/100);
+  setBtnLoading('markSentBtn', true);
+  try {
+    for (const h of uh) { h.billed = true; h.invoiceNum = invNum; await apiCall({ action:'updateHour', id:h.id, row:[h.id,h.clientId,h.date,h.start,h.finish,h.hours,h.materials,h.work,h.invoiceNum,'TRUE'] }); }
+    for (const m of um) { m.billed = true; m.invoiceNum = invNum; await apiCall({ action:'updateMaterial', id:m.id, row:[m.id,m.clientId,m.date,m.amount,m.desc,m.receipt,m.invoiceNum,'TRUE'] }); }
+    const inv = { id:uid(), invNum, clientId, clientName:c.name, date:invDate, due:invDue, total, status:'sent', paidDate:'' };
+    await apiCall({ action:'addInvoice', row:[inv.id,inv.invNum,inv.clientId,inv.clientName,inv.date,inv.due,inv.total,inv.status,inv.paidDate] });
+    invoiceHistory.push(inv);
+    document.getElementById('inv_num').value = nextInvNum();
+    renderHoursTable(); renderMaterialsTable(); renderHistory(); renderDashboard(); buildInvoicePreview();
+    setSyncStatus('green', 'saved');
+    alert('Invoice ' + invNum + ' saved. ' + uh.length + ' time entries + ' + um.length + ' materials marked billed.');
+  } catch(e) { alert('Error: ' + e.message); setSyncStatus('red', 'error'); }
+  setBtnLoading('markSentBtn', false, 'Mark as Sent');
+}
+
+async function markPaid(id) {
+  const inv = invoiceHistory.find(i => i.id === id); if (!inv) return;
+  inv.status = 'paid'; inv.paidDate = todayStr();
+  try {
+    await apiCall({ action:'updateInvoice', id, row:[inv.id,inv.invNum,inv.clientId,inv.clientName,inv.date,inv.due,inv.total,'paid',inv.paidDate] });
+    renderHistory(); renderDashboard(); setSyncStatus('green', 'saved');
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+function renderHistory() {
+  const out = invoiceHistory.filter(i => i.status === 'sent').reduce((s,i) => s+i.total, 0);
+  const paid = invoiceHistory.filter(i => i.status === 'paid').reduce((s,i) => s+i.total, 0);
+  document.getElementById('historySummary').innerHTML = `
+    <div class="summary-card"><div class="slabel">Total invoiced</div><div class="svalue">${fmtMoney(out+paid)}</div></div>
+    <div class="summary-card"><div class="slabel">Outstanding</div><div class="svalue red">${fmtMoney(out)}</div></div>
+    <div class="summary-card"><div class="slabel">Collected</div><div class="svalue green">${fmtMoney(paid)}</div></div>`;
+  const el = document.getElementById('historyTable');
+  if (!invoiceHistory.length) { el.innerHTML = '<div class="empty">No invoices yet.</div>'; return; }
+  const sorted = [...invoiceHistory].sort((a,b) => b.date.localeCompare(a.date));
+  let rows = '';
+  sorted.forEach(i => {
+    rows += `<tr>
+      <td style="font-family:var(--mono)">${i.invNum}</td>
+      <td style="font-weight:500">${i.clientName}</td>
+      <td style="font-family:var(--mono)">${fmtDate(i.date)}</td>
+      <td style="font-family:var(--mono);color:${i.status === 'sent' ? 'var(--warn)' : 'var(--ink3)'}">${fmtDate(i.due) || '--'}</td>
+      <td style="font-family:var(--mono);font-weight:500">${fmtMoney(i.total)}</td>
+      <td><span class="badge ${i.status === 'paid' ? 'badge-paid' : 'badge-due'}">${i.status}</span></td>
+      <td style="font-family:var(--mono);color:var(--ink3)">${fmtDate(i.paidDate) || '--'}</td>
+      <td>${i.status === 'sent' ? '<button class="btn btn-primary" style="font-size:12px;padding:5px 10px" onclick="markPaid(\'' + i.id + '\')">Mark Paid</button>' : '--'}</td>
+    </tr>`;
+  });
+  el.innerHTML = `<table class="data-table"><thead><tr><th>Invoice #</th><th>Client</th><th>Date</th><th>Due</th><th>Total</th><th>Status</th><th>Paid</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function renderDashboard() {
+  const ubL = hours.filter(h => !h.billed).reduce((s,h) => { const c = clientById(h.clientId); return s + (h.hours * (c ? c.rate : 0)); }, 0);
+  const ubM = materials.filter(m => !m.billed).reduce((s,m) => s+m.amount, 0) + hours.filter(h => !h.billed).reduce((s,h) => s+(h.materials||0), 0);
+  const out = invoiceHistory.filter(i => i.status === 'sent').reduce((s,i) => s+i.total, 0);
+  document.getElementById('dashSummary').innerHTML = `
+    <div class="summary-card"><div class="slabel">Unbilled labor</div><div class="svalue">${fmtMoney(ubL)}</div></div>
+    <div class="summary-card"><div class="slabel">Unbilled materials</div><div class="svalue">${fmtMoney(ubM)}</div></div>
+    <div class="summary-card"><div class="slabel">Outstanding invoices</div><div class="svalue red">${fmtMoney(out)}</div></div>`;
+  const byC = {};
+  hours.filter(h => !h.billed).forEach(h => { const c = clientById(h.clientId); if (!c) return; if (!byC[c.id]) byC[c.id] = { name:c.name, l:0, m:0 }; byC[c.id].l += h.hours * c.rate; byC[c.id].m += h.materials || 0; });
+  materials.filter(m => !m.billed).forEach(m => { const c = clientById(m.clientId); if (!c) return; if (!byC[c.id]) byC[c.id] = { name:c.name, l:0, m:0 }; byC[c.id].m += m.amount; });
+  const ub = Object.values(byC);
+  let ubRows = '';
+  ub.forEach(e => { ubRows += `<tr><td style="font-weight:500">${e.name}</td><td style="font-family:var(--mono)">${fmtMoney(e.l)}</td><td style="font-family:var(--mono)">${fmtMoney(e.m)}</td><td style="font-family:var(--mono);font-weight:500">${fmtMoney(e.l+e.m)}</td></tr>`; });
+  document.getElementById('dashUnbilled').innerHTML = ub.length
+    ? `<table class="data-table"><thead><tr><th>Client</th><th>Labor</th><th>Mats</th><th>Total</th></tr></thead><tbody>${ubRows}</tbody></table>`
+    : '<div class="empty">All work billed</div>';
+  const outInv = invoiceHistory.filter(i => i.status === 'sent');
+  let outRows = '';
+  outInv.forEach(i => { outRows += `<tr><td style="font-family:var(--mono)">${i.invNum}</td><td style="font-weight:500">${i.clientName}</td><td style="font-family:var(--mono);color:var(--warn)">${fmtDate(i.due) || '--'}</td><td style="font-family:var(--mono);font-weight:500">${fmtMoney(i.total)}</td></tr>`; });
+  document.getElementById('dashOutstanding').innerHTML = outInv.length
+    ? `<table class="data-table"><thead><tr><th>Invoice</th><th>Client</th><th>Due</th><th>Amount</th></tr></thead><tbody>${outRows}</tbody></table>`
+    : '<div class="empty">No outstanding invoices</div>';
+}
+</script>
+</body>
+</html>
